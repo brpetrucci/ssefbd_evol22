@@ -1,2 +1,7 @@
-# ssefbd_evol22
-Simulation study to test the performance of SSE (BiSSE, QuaSSE, HiSSE) with fossil data. Includes simpler, proof of concept first step for the EEOB 565 final project.
+# Testing SSE models with FBD
+
+This repository contains simulation and analysis scripts for a simulation study intending to test the power and error rates of State Speciation and Extinction (SSE) models with the inclusion of fossil data using a Fossilized Birth-Death (FBD) model.
+
+## Proof of concept: EEOB 565
+
+The first stage of this project will be a simpler proof of concept style simulation study to assess the performance of BiSSE estimates of extinction rates using an FBD tree. 
