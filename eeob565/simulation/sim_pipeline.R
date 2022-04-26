@@ -38,7 +38,7 @@ library(readr)
 n0 <- 1
 
 # expected number of extant species
-N <- 500
+N <- 50
 
 # base (null model) rates
 # from BiSSE paper and Beauliau & O'Meara 2022
@@ -160,6 +160,12 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
   while (!bounds) {
     # run simulation
     sim <- bd.sim.musse(n0, lambda, mu, "number", N = N, Q = Q)
+    
+    # run again until we have some extinct species
+    while (sum(!sim$SIM$EXTANT) == 0) {
+      sim <- bd.sim.musse(n0, lambda, mu, "number", N = N, Q = Q)
+      
+    }
     
     # traits
     traits <- lapply(sim$TRAITS, function(x) x[[1]])
@@ -360,13 +366,10 @@ save_sims <- function(nReps, simReps, targetDir) {
 }
 
 # create function to run simulations for a list of parameters
-simulate <- function(seeds, nReps, comb, key, simDir) {
+simulate <- function(seeds, nReps, comb, key, simDir, N) {
   ### recover parameters from key
   # ref
   ref <- key$ref[comb]
-  
-  # number of species to simulate to
-  N <- 500
   
   # speciation rates
   lambda0 <- key$lambda0[comb]
@@ -412,7 +415,7 @@ simDir <- paste0("/Users/petrucci/Documents/research/ssefbd_evol22/",
 smart.dir.create(simDir)
 
 # run simulations for each combination of parameters
-for (comb in 1:nrow(key)) {
+for (comb in 1){#:nrow(key)) {
   # get a seed for each rep
   seeds <- runif(nReps, (comb - 1)*nReps, comb*nReps)
   
@@ -424,5 +427,5 @@ for (comb in 1:nrow(key)) {
   save(seeds, file = paste0(combDir, "seeds.RData"))
   
   # simulate the reps with this parameter combination
-  simulate(seeds, nReps, comb, key, simDir)
+  simulate(seeds, nReps, comb, key, simDir, N)
 }
