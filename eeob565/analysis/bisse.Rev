@@ -1,0 +1,121 @@
+##########################################
+##   Binary State Speciation-Extinction ##
+##  Testing SSE models with fossil data ##
+##      EEOB 565 - Macroevolution       ##
+##     Bruno do Rosario Petrucci        ##
+##########################################
+
+rep <- 1
+comb <- 1
+###
+# read data
+
+# parameter reference
+refs <- v("1_base", "2_high_lambda1", "3_high_mu0", "4_low_q10")
+ref <- refs[comb]
+
+# data directory
+data_dir <- "eeob565/simulation/replicates/" + ref + "/"
+
+# get the tree
+tree <- readTrees(file = data_dir + "trees/fbd/tree_fbd_" + rep + ".nex")[1]
+
+# get the taxa list
+taxa <- tree.taxa()
+
+# and get character data
+data <- readCharacterData(file = data_dir + "traits/fbd/traits_fbd_" + rep + ".nex")
+
+# get the number of taxa
+num_taxa <- taxa.size()
+
+# set number of states
+num_states <- 2
+
+# create workspace objects for moves and monitors
+moves = VectorMoves()
+monitors = VectorMonitors()
+
+###
+# set the model
+
+# set prior rate means to real means
+lambda_prior <- 1/0.1
+mu_prior <- 1/0.03
+
+# set a separate variable for each speciation and extinction rate
+for (i in 1:num_states) {
+  # set loguniform priors for each of the rates
+  lambda[i] ~ dnExp(lambda_prior)
+  mu[i] ~ dnExp(mu_prior)
+
+  # append moves 
+  moves.append(mvScale(lambda[i], lambda = 0.2, tune = true, weight = 3.0))
+  moves.append(mvScale(mu[i], lambda = 0.2, tune = true, weight = 3.0))
+
+  # to keep track of diversification rate
+  div[i] := lambda[i] - mu[i]
+}
+
+# set transition rate prior mean to close to the real mean 
+rate_pr <- 1/0.01
+
+# set the rate priors with mean above
+for (i in 1:num_states*(num_states - 1)) {
+  # mean is set so that we expect 200 transitions on average accross tree
+  q[i] ~ dnExp(rate_pr)
+
+  # append moves 
+  moves.append(mvScale(q[i], lambda = 2.0, tune = true, weight = 3.0))
+}
+
+# create the rate matrix
+Q := fnFreeBinary(q, rescaled = false)
+
+# set a Dirichlet prior to the root state frequencies
+pi ~ dnDirichlet(rep(1, num_states))
+
+# append move
+moves.append(mvDirichletSimplex(pi, tune = true, weight = 2.0))
+
+# set serial sampling rate to a constant to help the model out
+psi <- rep(5/100, 2)
+
+# sampling at present
+rho := Probability(1)
+
+# root age of the tree
+root_age <- tree.rootAge()
+
+# set the bisse fbd tree
+fbdbisse_tree ~ dnCDBDP(rootAge = root_age, speciationRates = lambda, extinctionRates = mu,
+                        Q = Q, pi = pi, psi = psi, rho = rho, maxNumLineages = 5000)
+
+# clamp it to the data
+fbdbisse_tree.clamp(tree)
+fbdbisse_tree.clampCharData(data)
+
+# create our model object
+mymodel = model(fbdbisse_tree)
+
+###
+# set up monitors and run analysis
+
+# output file names
+out_name = "eeob565/analysis/output/" + ref + "/rep_" + rep
+
+# append monitor to log
+monitors.append(mnModel(filename = out_name + ".log", printgen = 1000))
+
+# and to screen
+monitors.append(mnScreen(printgen = 1000))
+
+# creates mcmc object
+mymcmc = mcmc(mymodel, monitors, moves, nruns = 2, combine = "mixed")
+
+# run mcmc
+mymcmc.run(generations = 1, tuningInterval = 200, checkpointInterval = 1000, 
+           checkpointFile = out_name + "/checkpoint/rep_" + rep + ".state")
+
+# quit
+q()
