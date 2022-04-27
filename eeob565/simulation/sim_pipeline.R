@@ -38,7 +38,7 @@ library(readr)
 n0 <- 1
 
 # expected number of extant species
-N <- 50
+N <- 500
 
 # base (null model) rates
 # from BiSSE paper and Beauliau & O'Meara 2022
@@ -410,12 +410,11 @@ simulate <- function(seeds, nReps, comb, key, simDir, N) {
 nReps <- 100
 
 # simulations directory
-simDir <- paste0("/Users/petrucci/Documents/research/ssefbd_evol22/",
-                 "eeob565/simulation/replicates/")
+simDir <- paste0("/work/LAS/phylo-lab/petrucci/ssefbd_evol22/eeob565/simulation/replicates/")
 smart.dir.create(simDir)
 
 # run simulations for each combination of parameters
-for (comb in 1){#:nrow(key)) {
+for (comb in 1:nrow(key)) {
   # get a seed for each rep
   seeds <- runif(nReps, (comb - 1)*nReps, comb*nReps)
   

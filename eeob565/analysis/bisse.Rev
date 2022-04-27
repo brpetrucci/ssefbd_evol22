@@ -5,8 +5,6 @@
 ##     Bruno do Rosario Petrucci        ##
 ##########################################
 
-rep <- 1
-comb <- 1
 ###
 # read data
 
@@ -87,7 +85,7 @@ root_age <- tree.rootAge()
 print("setting tree")
 
 # set the bisse fbd tree
-fbdbisse_tree ~ dnCDBDP(rootAge = root_age, speciationRates = lambda, extinctionRates = mu, Q = Q, pi = pi, psi = psi, rho = rho, pruneExtinctLineages = false)#, nTimeSlices = 10, maxNumLineages = 100)
+fbdbisse_tree ~ dnCDBDP(rootAge = root_age, speciationRates = lambda, extinctionRates = mu, Q = Q, pi = pi, psi = psi, rho = rho, pruneExtinctLineages = false, nTimeSlices = 1000)
 
 print("done setting tree")
 
@@ -119,7 +117,7 @@ monitors.append(mnScreen(printgen = 1000))
 mymcmc = mcmc(mymodel, monitors, moves, nruns = 2, combine = "mixed")
 
 # run mcmc
-mymcmc.run(generations = 10000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/rep_" + rep + ".state")
+mymcmc.run(generations = 100000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/rep_" + rep + ".state")
 
 # quit
 q()
