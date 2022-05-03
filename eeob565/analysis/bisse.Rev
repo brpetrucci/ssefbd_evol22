@@ -85,7 +85,7 @@ root_age <- tree.rootAge()
 print("setting tree")
 
 # set the bisse fbd tree
-fbdbisse_tree ~ dnCDBDP(rootAge = root_age, speciationRates = lambda, extinctionRates = mu, Q = Q, pi = pi, psi = psi, rho = rho, pruneExtinctLineages = false, nTimeSlices = 1000)
+fbdbisse_tree ~ dnCDBDP(rootAge = root_age, speciationRates = lambda, extinctionRates = mu, Q = Q, pi = pi, psi = psi, rho = rho, sampleCharHistory = false)
 
 print("done setting tree")
 
