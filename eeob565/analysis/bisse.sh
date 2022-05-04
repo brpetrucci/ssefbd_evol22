@@ -1,6 +1,10 @@
 # load modules
 module load gcc/7.3.0-xegsmw4
-module load revbayes/1.1.0-b6wyspw
+module load cmake/3.20.5-3ixnvxg
+module load boost/1.70.0-miyqohf
+
+# add rb to the path
+export PATH=$PATH:/work/LAS/phylo-lab/petrucci/revbayes/projects/cmake
 
 # go to the correct directory
 cd /work/LAS/phylo-lab/petrucci/ssefbd_evol22/

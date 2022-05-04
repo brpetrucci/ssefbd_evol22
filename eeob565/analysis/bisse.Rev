@@ -105,10 +105,10 @@ mymodel = model(fbdbisse_tree)
 # set up monitors and run analysis
 
 # output file names
-out_name = "eeob565/analysis/output/" + ref + "/rep_" + rep
+out_name = "eeob565/analysis/output/" + ref + "/rep_" + rep + "/"
 
 # append monitor to log
-monitors.append(mnModel(filename = out_name + ".log", printgen = 100))
+monitors.append(mnModel(filename = out_name + "ssefbd.log", printgen = 1000))
 
 # and to screen
 monitors.append(mnScreen(printgen = 1000))
@@ -117,7 +117,7 @@ monitors.append(mnScreen(printgen = 1000))
 mymcmc = mcmc(mymodel, monitors, moves, nruns = 2, combine = "mixed")
 
 # run mcmc
-mymcmc.run(generations = 100000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/rep_" + rep + ".state")
+mymcmc.run(generations = 1000000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/ssefbd" + rep + ".state")
 
 # quit
 q()
