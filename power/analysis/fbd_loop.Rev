@@ -1,0 +1,8 @@
+###
+# looping fbd.Rev for all reps and parameter combinations
+
+for (rep in 1:100) {
+  comb <- 1
+  rep <- rep
+  source("analysis/fbd.Rev")
+}

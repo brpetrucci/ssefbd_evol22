@@ -1,0 +1,92 @@
+##########################################
+##      Fossilized birth-death          ##
+##          Evolution 2022              ##
+##     Bruno do Rosario Petrucci        ##
+##########################################
+
+###
+# read data
+
+# parameter reference
+refs <- v("1_base", "2_high_lambda1", "3_high_mu0", "4_low_q10", "5_low_rho", "6_high_rho")
+ref <- refs[comb]
+
+# data directory
+data_dir <- "simulation/replicates/" + ref + "/"
+
+# get the tree
+tree <- readTrees(file = data_dir + "trees/fbd/tree_fbd_" + rep + ".nex")[1]
+
+# get the taxa list
+taxa <- tree.taxa()
+
+# get the number of taxa
+num_taxa <- taxa.size()
+
+# create workspace objects for moves and monitors
+moves = VectorMoves()
+monitors = VectorMonitors()
+
+###
+# set the model
+
+# set prior rate means to real means
+lambda_prior <- 1/0.1
+mu_prior <- 1/0.03
+
+# set a separate variable for each speciation and extinction rate
+# set loguniform priors for each of the rates
+lambda ~ dnExp(lambda_prior)
+mu ~ dnExp(mu_prior)
+
+# append moves 
+moves.append(mvScale(lambda, lambda = 0.2, tune = true, weight = 3.0))
+moves.append(mvScale(mu, lambda = 0.2, tune = true, weight = 3.0))
+
+# to keep track of diversification rate
+div := lambda - mu
+
+# set serial sampling rate to a constant to help the model out
+psi ~ dnExp(100/5)
+
+moves.append(mvScale(psi, lambda = 0.2, tune = true, weight = 3.0))
+
+# root age of the tree
+root_age <- tree.rootAge()
+
+print("setting tree")
+
+# set the bisse fbd tree
+fbdbisse_tree ~ dnFBDP(rootAge = root_age, lambda = lambda, mu = mu, psi = psi, taxa = taxa)
+
+print("done setting tree")
+
+# clamp it to the data
+fbdbisse_tree.clamp(tree)
+
+print("done clamping tree")
+
+# create our model object
+mymodel = model(fbdbisse_tree)
+
+###
+# set up monitors and run analysis
+
+# output file names
+out_name = "analysis/output/" + ref + "/rep_" + rep + "/"
+
+# append monitor to log
+monitors.append(mnModel(filename = out_name + "fbd/ssefbd.log", printgen = 100))
+
+# and to screen
+monitors.append(mnScreen(printgen = 1000))
+
+# creates mcmc object
+mymcmc = mcmc(mymodel, monitors, moves, nruns = 2, combine = "mixed")
+
+# run mcmc
+mymcmc.run(generations = 100000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/ssefbd" + rep + ".state")
+
+# quit
+#q()
+
