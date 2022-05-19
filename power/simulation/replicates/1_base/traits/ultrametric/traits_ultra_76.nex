@@ -1,5 +1,5 @@
 #NEXUS
-[Data written by write.nexus.data.R, Mon May 16 13:00:40 2022]
+[Data written by write.nexus.data.R, Thu May 19 14:54:14 2022]
 BEGIN DATA;
   DIMENSIONS NTAX=500 NCHAR=1;
   FORMAT DATATYPE=STANDARD MISSING=? GAP=- INTERLEAVE=NO symbols="0123456789";
@@ -402,7 +402,6 @@ BEGIN DATA;
     t626      0
     t627      0
     t628      1
-    t629      0
     t630      0
     t631      0
     t633      1
@@ -475,10 +474,10 @@ BEGIN DATA;
     t705      0
     t706      0
     t707      0
-    t708      1
+    t708      0
     t709      1
     t710      1
-    t711      0
+    t711      1
     t712      0
     t713      0
     t714      0
@@ -487,23 +486,24 @@ BEGIN DATA;
     t717      0
     t718      0
     t719      0
-    t720      1
-    t721      0
+    t720      0
+    t721      1
     t722      0
     t723      0
     t724      0
-    t725      1
-    t726      0
-    t727      1
+    t725      0
+    t726      1
+    t727      0
     t728      1
-    t729      0
+    t729      1
     t730      0
-    t731      1
-    t732      0
+    t731      0
+    t732      1
     t733      0
     t734      0
     t735      0
-    t736      1
+    t736      0
+    t737      1
   ;
 END;
 

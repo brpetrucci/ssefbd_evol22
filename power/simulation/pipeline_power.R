@@ -218,6 +218,23 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
     # remove them
     sample <- sample[!sampleRem, ]
     
+    # update sampled
+    sampled <- unlist(lapply(1:length(sim$TS), function(x) 
+      x %in% (unique(floor(as.numeric(sub("t", "", sample$Species)))))))
+    
+    # do it again if necessary
+    while (any(sample$SampT > sort(sim$TS[sampled], decreasing = TRUE)[2])) {
+      # find samples that came before the first speciation
+      sampleRem <- sample$SampT > sort(sim$TS[sampled], decreasing = TRUE)[2]
+      
+      # remove them
+      sample <- sample[!sampleRem, ]
+      
+      # update sampled
+      sampled <- unlist(lapply(1:length(sim$TS), function(x) 
+        x %in% (unique(floor(as.numeric(sub("t", "", sample$Species)))))))
+    }
+    
     # get complete tree
     tree <- make.phylo(sim)
     
@@ -285,7 +302,7 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
     
     # checks - at least 50% of extinct species sampled, and
     # both traits represented at least 10%
-    bounds <- (ratioSampled >= 0.25) &&
+    bounds <- (ratioSampled >= 0.2) &&
       (ratioTrait >= 0.1) &&
       (ratioTrait <= 0.9)
     
@@ -293,7 +310,11 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
     counter <- counter + 1
     
     # if counter is higher than 10, maybe rethink the parameters
-    if (counter > 10) stop("Hard to find replicate within bounds")
+    if (counter > 100) {
+      print(ratioSampled)
+      print(ratioTrait)
+      stop("Hard to find replicate within bounds")
+    }
   }
   
   # make a list to return
