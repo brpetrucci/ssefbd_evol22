@@ -439,7 +439,7 @@ simulate <- function(seeds, nReps, comb, key, simDir, N) {
 nReps <- 100
 
 # simulations directory
-simDir <- paste0("/Users/petrucci/Documents/research/ssefbd_evol22/simulation/replicates/")
+simDir <- paste0("/Users/petrucci/Documents/research/ssefbd_evol22/power/simulation/replicates/")
 smart.dir.create(simDir)
 
 # run simulations for each combination of parameters

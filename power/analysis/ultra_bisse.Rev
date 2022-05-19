@@ -8,6 +8,10 @@
 ###
 # read data
 
+
+########### remove later #########
+comb <- rep <- 1
+
 # parameter reference
 refs <- v("1_base", "2_high_lambda1", "3_high_mu0", "4_low_q10")
 ref <- refs[comb]
@@ -38,8 +42,8 @@ monitors = VectorMonitors()
 # set the model
 
 # set prior rate means to real means
-lambda_prior <- 1/0.2
-mu_prior <- 1/0.06
+lambda_prior <- 1/0.1
+mu_prior <- 1/0.03
 
 # set a separate variable for each speciation and extinction rate
 for (i in 1:num_states) {
@@ -48,30 +52,30 @@ for (i in 1:num_states) {
   mu[i] ~ dnExp(mu_prior)
 
   # append moves 
-  moves.append(mvScale(lambda[i], lambda = 0.2, tune = true, weight = 3.0))
-  moves.append(mvScale(mu[i], lambda = 0.2, tune = true, weight = 3.0))
+  moves.append(mvScale(lambda[i], lambda = 0.2, weight = 5.0))
+  moves.append(mvScale(mu[i], lambda = 0.2, weight = 5.0))
 
   # to keep track of diversification rate
   div[i] := lambda[i] - mu[i]
 }
 
 # set transition rate prior mean to close to the real mean 
-rate_pr <- 1/0.005
+rate_pr <- 1/0.01
 
 # set the rate priors with mean above
 for (i in 1:num_states*(num_states - 1)) {
-  # mean is set so that we expect 200 transitions on average accross tree
+  # set exponential prior
   q[i] ~ dnExp(rate_pr)
 
   # append moves 
-  moves.append(mvScale(q[i], lambda = 2.0, tune = true, weight = 3.0))
+  moves.append(mvScale(q[i], lambda = 0.2, weight = 5.0))
 }
 
 # create the rate matrix
 Q := fnFreeBinary(q, rescaled = false)
 
 # set root state frequencies to the correct value to help model out 
-pi <-  Simplex(1, 0)
+pi <- Simplex(1, 0)
 
 # sampling at present
 rho <- Probability(1)
@@ -105,7 +109,7 @@ mymodel = model(fbdbisse_tree)
 out_name = "analysis/output/" + ref + "/rep_" + rep + "/"
 
 # append monitor to log
-monitors.append(mnModel(filename = out_name + "ultra/ssefbd.log", printgen = 1000))
+monitors.append(mnModel(filename = out_name + "ultra/ssefbd.log", printgen = 100))
 
 # and to screen
 monitors.append(mnScreen(printgen = 1000))
@@ -114,7 +118,7 @@ monitors.append(mnScreen(printgen = 1000))
 mymcmc = mcmc(mymodel, monitors, moves, nruns = 2, combine = "mixed")
 
 # run mcmc
-mymcmc.run(generations = 1000000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/ssefbd" + rep + ".state")
+mymcmc.run(generations = 100000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/ssefbd" + rep + ".state")
 
 # quit
-#q()
+q()
