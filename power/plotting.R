@@ -7,7 +7,7 @@ library(bayestestR)
 # function to read logs
 read_logs <- function(refs, nReps, base_dir, mod_dir = NULL, cut) {
   # create data frame list
-  logs <- list()
+  fbd_logs <- list()
   
   # for each ref
   for (ref in refs) {
@@ -29,7 +29,7 @@ read_logs <- function(refs, nReps, base_dir, mod_dir = NULL, cut) {
   }
   
   # return logs
-  return(logs)
+  return(fbd_logs)
 }
 
 ###

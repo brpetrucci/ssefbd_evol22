@@ -35,7 +35,7 @@ load_all()
   # Transition rates: q01 = q10 = 0.01, and q10 = 0.005
 # mu: mu0 = mu1 = 0.03; mu0 = 0.06
 # lambda: lambda0 = lambda1 = 0.1; lambda1 = 0.2
-# rho: 0.01, 0.05, 0.1
+# psi: 0.01, 0.05, 0.1
 # N: 500
 
 ###
@@ -55,7 +55,7 @@ mu0 <- mu1 <- 0.03
 
 q01 <- q10 <- 0.01
 
-rho <- 0.05
+psi <- 0.05
 
 # create variations we want to test -- also from BiSSE
 lambda1Var <- 0.2
@@ -63,9 +63,6 @@ lambda1Var <- 0.2
 mu0Var <- 0.06
 
 q10Var <- 0.005
-
-# and the variation in fossil sampling rate
-rhoVar <- c(0.01, 0.1)
 
 ###
 # create directories for saving data
@@ -88,20 +85,19 @@ key <- data.frame(ref = "base",
                   mu1 = mu1, 
                   q01 = q01,
                   q10 = q10,
-                  rho = rho)
+                  psi = psi)
 
 # make a vector to hold the baseline parameters
 base <- key[1, ]
 
 # reference vector for each parameter change
-refs <- c("high_lambda1", "high_mu0", "low_q10", 
-          "low_rho", "high_rho")
+refs <- c("high_lambda1", "high_mu0", "low_q10")#, "low_psi", "high_psi")
 
 # the corresponding column numbers to change in the base
-change <- c(3, 4, 7, 8, 8)
+change <- c(3, 4, 7)#, 8, 8)
 
 # the new values
-new <- c(lambda1Var, mu0Var, q10Var, rhoVar)
+new <- c(lambda1Var, mu0Var, q10Var)#, psiVar)
 
 # copy the baseline a bunch of times to fill the key
 key <- rbind(key, key[rep(1, length(change)), ])
@@ -147,7 +143,7 @@ collapseFossils <- function(tree) {
 }
 
 # create simulation function for one rep
-simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
+simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, psi) {
   ### set up parameters
   # initial number of species
   n0 <- 1
@@ -184,56 +180,26 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
     
     # and get the sim object
     sim <- sim$SIM
-    
+  
     # get tMax
     tMax <- max(sim$TS)
     
     # sample data frame
     sample <- data.frame()
-    while (nrow(sample) == 0) {
-      sample <- suppressMessages(sample.clade(sim, rho, max(sim$TS)))
+    while (nrow(sample) == 0 || sum(sample$Species == "t1") > 0) {
+      sample <- suppressMessages(sample.clade(sim, psi, max(sim$TS)))
     }
     
-    # check which species were sampled
+    # sampled also including the extant species
     sampled <- unlist(lapply(1:length(sim$TS), function(x) 
-      x %in% (unique(floor(as.numeric(sub("t", "", sample$Species)))))))
-    
-    # correct for samples before the first speciation
-    if (sampled[1] && 
-        all(sample$SampT[sample$Species == "t1"] > 
-            sort(sim$TS, decreasing = TRUE)[2])) {
-      # 1 is not sampled
-      sampled[1] <- FALSE
-    }
+      x %in% (unique(floor(as.numeric(sub("t", "", sample$Species))))) ||
+        x %in% which(sim$EXTANT)))
     
     # check how many extinct species were sampled
     nSampled <- sum(sampled & !sim$EXTANT)
     
     # get percentage of species sampled
     ratioSampled <- nSampled/sum(!sim$EXTANT)
-    
-    # find samples that came before the first speciation
-    sampleRem <- sample$SampT > sort(sim$TS[sampled], decreasing = TRUE)[2]
-    
-    # remove them
-    sample <- sample[!sampleRem, ]
-    
-    # update sampled
-    sampled <- unlist(lapply(1:length(sim$TS), function(x) 
-      x %in% (unique(floor(as.numeric(sub("t", "", sample$Species)))))))
-    
-    # do it again if necessary
-    while (any(sample$SampT > sort(sim$TS[sampled], decreasing = TRUE)[2])) {
-      # find samples that came before the first speciation
-      sampleRem <- sample$SampT > sort(sim$TS[sampled], decreasing = TRUE)[2]
-      
-      # remove them
-      sample <- sample[!sampleRem, ]
-      
-      # update sampled
-      sampled <- unlist(lapply(1:length(sim$TS), function(x) 
-        x %in% (unique(floor(as.numeric(sub("t", "", sample$Species)))))))
-    }
     
     # get complete tree
     tree <- make.phylo(sim)
@@ -257,6 +223,42 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
     # and make 0 length branches nodes
     treeFBD <- collapseFossils(treeFBD)
     
+    # time for MRCA
+    tMRCA <- max(node.depth.edgelength(treeFBD))
+    
+    # MRCA 
+    MRCA <- ifelse(any(tMRCA == sim$TS), 
+                   which(tMRCA == sim$TS), 
+                   gsub("t", "", treeFBD$node.label[1]))
+    
+    # if MRCA is a number, it's a speciation event
+    if (is.numeric(MRCA)) {
+      if (length(abs(sim$TS[sim$TS > tMRCA & sampled] - tMRCA)) == 0) {
+        previousSpec <- tMRCA + 
+          min(abs(sim$TS[sim$TS > tMRCA] - tMRCA))
+      } else {
+        previousSpec <- tMRCA + 
+          min(abs(sim$TS[sim$TS > tMRCA & sampled] - tMRCA))
+      }
+      
+      previousSp <- which(sim$TS == previousSpec)
+      
+      origin <- sim$TS[previousSp]
+    } else {
+      origin <- sim$TS[floor(as.numeric(MRCA))]
+    }
+    
+    # root edge
+    treeFBD$root.edge <- origin - tMRCA
+    if (is.na(origin) || length(origin) == 0 || treeFBD$root.edge == 0 ||
+        origin < 0) {
+      print(tMRCA)
+      print(origin)
+      print(MRCA)
+      print(sim)
+      print(head(sample))
+    }
+    
     # times to sample traits from the saTree taxa
     treeFBDTraitT <- 
       unlist(lapply(fbdTaxa, function(x) {
@@ -268,7 +270,6 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
         ifelse(x == floor(x), 0, 
                sampleCut[round(10^ceiling(log(length(sampleCut) + 1, 10))*
                                  (x - floor(x)))])}))
-    # the present for extant species, sampling time for fossils
     
     # name it
     names(treeFBDTraitT) <- paste0("t", fbdTaxa)
@@ -318,7 +319,7 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
   }
   
   # make a list to return
-  res <- list(SIM = sim, SAMPLE = sample, 
+  res <- list(SIM = sim, SAMPLE = sample, ORIG = origin,
               TREE = tree, ULTRATREE = treeUltra, FBDTREE = treeFBD,
               TRAITSULTRA = treeUltraTraits, TRAITSFBD = treeFBDTraits)
   
@@ -329,6 +330,9 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, rho) {
 save_sims <- function(nReps, simReps, targetDir) {
   # extract simulations
   simList <- lapply(1:nReps, function(x) simReps[[x]]$SIM)
+  
+  # extract origin times
+  origins <- unlist(lapply(1:nReps, function(x) simReps[[x]]$ORIG))
   
   # trait data 
   traitsUltra <- lapply(1:nReps, function(x) simReps[[x]]$TRAITSULTRA)
@@ -408,6 +412,11 @@ save_sims <- function(nReps, simReps, targetDir) {
   invisible(lapply(1:nReps, function(x)
     write.nexus(treeFBDList[[x]], 
                 file = paste0(treeFBDDir, "tree_fbd_", x, ".nex"))))
+
+  # and FBD tree origin times
+  invisible(lapply(1:nReps, function(x)
+    write_delim(as.data.frame(origins), paste0(comb_dir, "origins.txt"), 
+                col_names = FALSE)))
   
   # save complete trees as well
   invisible(lapply(1:nReps, function(x)
@@ -416,7 +425,7 @@ save_sims <- function(nReps, simReps, targetDir) {
 }
 
 # create function to run simulations for a list of parameters
-simulate <- function(seeds, nReps, comb, key, simDir, N) {
+simulate <- function(seeds, nReps, comb, key, simDir, N, psi) {
   ### recover parameters from key
   # ref
   ref <- key$ref[comb]
@@ -434,7 +443,7 @@ simulate <- function(seeds, nReps, comb, key, simDir, N) {
   q10 <- key$q10[comb]
   
   # fossil sampling rates
-  rho <- 0.05
+  psi <- psi
   
   ## create directories
   # base directory for simulations, if it wasn't created
@@ -446,9 +455,9 @@ simulate <- function(seeds, nReps, comb, key, simDir, N) {
   
   # run simulations
   simReps <- lapply(1:nReps, function(x) {
-    print(paste0("comb: ", ref, " rep: ", x))
+    print(paste0("comb: ", ref, " rep: ", x, " seed: ", seeds[x]))
     set.seed(seeds[x])
-    simulate_rep(lambda0, lambda1, mu0, mu1, q01, q10, N, rho)
+    simulate_rep(lambda0, lambda1, mu0, mu1, q01, q10, N, psi)
   })
   
   # save them
@@ -457,24 +466,34 @@ simulate <- function(seeds, nReps, comb, key, simDir, N) {
 
 ###
 # number of reps to run each combination of parameters
-nReps <- 100
+nReps <- 500
 
-# simulations directory
-simDir <- paste0("/Users/petrucci/Documents/research/ssefbd_evol22/power/simulation/replicates/")
-smart.dir.create(simDir)
+# psi ref
+psiRefs <- c("1_low_psi", "2_med_psi", "3_high_psi")
 
-# run simulations for each combination of parameters
-for (comb in 1:nrow(key)) {
-  # get a seed for each rep
-  seeds <- runif(nReps, (comb - 1)*nReps, comb*nReps)
+# psi vector
+psiVar <- c(0.01, 0.05, 0.1)
+
+# for each psi
+for (i in 2) {#1:length(psiVar)) {
+  # simulations directory
+  simDir <- paste0("/Users/petrucci/Documents/research/ssefbd_evol22/power/", 
+                   "simulation/replicates/", psiRefs[i], "/")
+  smart.dir.create(simDir)
   
-  # create directory for this combination of simulations
-  combDir <- paste0(simDir, comb, "_", key$ref[comb], "/")
-  smart.dir.create(combDir)
-
-  # save seeds
-  save(seeds, file = paste0(combDir, "seeds.RData"))
+  # run simulations for each combination of parameters
+  for (comb in 1:nrow(key)) {
+    # get a seed for each rep
+    seeds <- runif(nReps, (comb - 1)*nReps, comb*nReps)
+    
+    # create directory for this combination of simulations
+    combDir <- paste0(simDir, comb, "_", key$ref[comb], "/")
+    smart.dir.create(combDir)
   
-  # simulate the reps with this parameter combination
-  simulate(seeds, nReps, comb, key, simDir, N)
+    # save seeds
+    save(seeds, file = paste0(combDir, "seeds.RData"))
+    
+    # simulate the reps with this parameter combination
+    simulate(seeds, nReps, comb, key, simDir, N, psi)
+  }
 }

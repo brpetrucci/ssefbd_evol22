@@ -1,7 +1,8 @@
 ###
 # looping fbd.Rev for all reps and parameter combinations
 
-for (rep in 1:100) {
+for (rep in 1:500) {
+  psiComb <- 2  
   comb <- 1
   rep <- rep
   source("analysis/fbd.Rev")

@@ -7,15 +7,22 @@
 ###
 # read data
 
+# psi reference
+psiRefs <- v("1_low_psi", "2_med_psi", "3_high_psi")
+psiRef <- psiRefs[psiComb]
+
 # parameter reference
 refs <- v("1_base", "2_high_lambda1", "3_high_mu0", "4_low_q10", "5_low_rho", "6_high_rho")
 ref <- refs[comb]
 
 # data directory
-data_dir <- "simulation/replicates/" + ref + "/"
+data_dir <- "simulation/replicates/" + psiRef + "/" + ref + "/"
 
 # get the tree
 tree <- readTrees(file = data_dir + "trees/fbd/tree_fbd_" + rep + ".nex")[1]
+
+# get origin time
+origin_age <- readMatrix(file = data_dir + "trees/fbd/origins.txt", " ")[rep][1]
 
 # get the taxa list
 taxa <- tree.taxa()
@@ -57,7 +64,7 @@ root_age <- tree.rootAge()
 print("setting tree")
 
 # set the bisse fbd tree
-fbdbisse_tree ~ dnFBDP(rootAge = root_age, lambda = lambda, mu = mu, psi = psi, taxa = taxa)
+fbdbisse_tree ~ dnFBDP(originAge = origin_age, lambda = lambda, mu = mu, psi = psi, taxa = taxa)
 
 print("done setting tree")
 
@@ -73,7 +80,7 @@ mymodel = model(fbdbisse_tree)
 # set up monitors and run analysis
 
 # output file names
-out_name = "analysis/output/" + ref + "/rep_" + rep + "/"
+out_name <- "analysis/output/" + psiRef + "/" + ref + "/rep_" + rep + "/"
 
 # append monitor to log
 monitors.append(mnModel(filename = out_name + "fbd/ssefbd.log", printgen = 100))
