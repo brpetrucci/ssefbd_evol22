@@ -28,9 +28,6 @@ taxa <- tree.taxa()
 # and get character data
 data <- readCharacterData(file = data_dir + "traits/fbd/traits_fbd_" + rep + ".nex")
 
-# get origin time
-origin_age <- readMatrix(file = data_dir + "trees/fbd/origins.txt", " ")[rep][1]
-
 # get the number of taxa
 num_taxa <- taxa.size()
 
@@ -77,14 +74,18 @@ Q := fnFreeBinary(q, rescaled = false)
 pi <- dnDirichlet(rep(1, num_states))
 moves.append(mvDirichletSimplex(pi, tune = true, weight = 2)) 
 
-# set serial sampling rate to a constant to help the model out
-psi <- rep(5/100, num_states)
+# set serial sampling rate to a similar prior as speciation and extinction
+psi <- dnLoguniform(1E-6, 1E2)
+moves.append(mvScale(psi, tune = true, weight = 3))
 
 # sampling at present
 rho <- Probability(1)
 
+# root age
+root_age <- tree.rootAge()
+
 # set the bisse fbd tree
-timetree ~ dnCDBDP(originAge = origin_age, speciationRates = lambda, extinctionRates = mu, Q = Q, pi = pi, psi = psi, rho = rho)
+timetree ~ dnCDBDP(rootAge = root_age, speciationRates = lambda, extinctionRates = mu, Q = Q, pi = pi, psi = psi, rho = rho)
 
 # clamp it to the data
 timetree.clamp(tree)

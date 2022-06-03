@@ -17,7 +17,7 @@ refs <- v("1_base", "2_high_lambda1", "3_high_mu0", "4_low_q10")
 ref <- refs[comb]
 
 # data directory
-data_dir <- "eeob565/simulation/replicates/" + psiRef + "/" + ref + "/"
+data_dir <- "simulation/replicates/" + psiRef + "/" + ref + "/"
 
 # get the tree
 tree <- readTrees(file = data_dir + "trees/ultrametric/tree_ultra_" + rep + ".nex")[1]
@@ -95,7 +95,7 @@ mymodel = model(timetree)
 # set up monitors and run analysis
 
 # output file names
-out_name <- "eeob565/analysis/output/" + psiRef + "/" + ref + "/rep_" + rep + "/bisse/"
+out_name <- "analysis/output/" + psiRef + "/" + ref + "/rep_" + rep + "/bisse/"
 
 # append monitor to log
 monitors.append(mnModel(filename = out_name + "ssefbd.log", printgen = 100))

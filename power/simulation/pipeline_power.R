@@ -186,7 +186,7 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, psi) {
     
     # sample data frame
     sample <- data.frame()
-    while (nrow(sample) == 0 || sum(sample$Species == "t1") > 0) {
+    while (nrow(sample) == 0) {
       sample <- suppressMessages(sample.clade(sim, psi, max(sim$TS)))
     }
     
@@ -195,11 +195,42 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, psi) {
       x %in% (unique(floor(as.numeric(sub("t", "", sample$Species))))) ||
         x %in% which(sim$EXTANT)))
     
+    # correct for samples before the first speciation
+    if (sampled[1] && 
+        all(sample$SampT[sample$Species == "t1"] > 
+            sort(sim$TS, decreasing = TRUE)[2])) {
+      # 1 is not sampled
+      sampled[1] <- FALSE
+    }
+    
     # check how many extinct species were sampled
     nSampled <- sum(sampled & !sim$EXTANT)
     
     # get percentage of species sampled
     ratioSampled <- nSampled/sum(!sim$EXTANT)
+    
+    # find samples that came before the first speciation
+    sampleRem <- sample$SampT > sort(sim$TS[sampled], decreasing = TRUE)[2]
+    
+    # remove them
+    sample <- sample[!sampleRem, ]
+    
+    # update sampled
+    sampled <- unlist(lapply(1:length(sim$TS), function(x) 
+      x %in% (unique(floor(as.numeric(sub("t", "", sample$Species)))))))
+    
+    # do it again if necessary
+    while (any(sample$SampT > sort(sim$TS[sampled], decreasing = TRUE)[2])) {
+      # find samples that came before the first speciation
+      sampleRem <- sample$SampT > sort(sim$TS[sampled], decreasing = TRUE)[2]
+      
+      # remove them
+      sample <- sample[!sampleRem, ]
+      
+      # update sampled
+      sampled <- unlist(lapply(1:length(sim$TS), function(x) 
+        x %in% (unique(floor(as.numeric(sub("t", "", sample$Species)))))))
+    }
     
     # get complete tree
     tree <- make.phylo(sim)
@@ -222,42 +253,6 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, psi) {
     
     # and make 0 length branches nodes
     treeFBD <- collapseFossils(treeFBD)
-    
-    # time for MRCA
-    tMRCA <- max(node.depth.edgelength(treeFBD))
-    
-    # MRCA 
-    MRCA <- ifelse(any(tMRCA == sim$TS), 
-                   which(tMRCA == sim$TS), 
-                   gsub("t", "", treeFBD$node.label[1]))
-    
-    # if MRCA is a number, it's a speciation event
-    if (is.numeric(MRCA)) {
-      if (length(abs(sim$TS[sim$TS > tMRCA & sampled] - tMRCA)) == 0) {
-        previousSpec <- tMRCA + 
-          min(abs(sim$TS[sim$TS > tMRCA] - tMRCA))
-      } else {
-        previousSpec <- tMRCA + 
-          min(abs(sim$TS[sim$TS > tMRCA & sampled] - tMRCA))
-      }
-      
-      previousSp <- which(sim$TS == previousSpec)
-      
-      origin <- sim$TS[previousSp]
-    } else {
-      origin <- sim$TS[floor(as.numeric(MRCA))]
-    }
-    
-    # root edge
-    treeFBD$root.edge <- origin - tMRCA
-    if (is.na(origin) || length(origin) == 0 || treeFBD$root.edge == 0 ||
-        origin < 0) {
-      print(tMRCA)
-      print(origin)
-      print(MRCA)
-      print(sim)
-      print(head(sample))
-    }
     
     # times to sample traits from the saTree taxa
     treeFBDTraitT <- 
@@ -319,7 +314,7 @@ simulate_rep <- function(lambda0, lambda1, mu0, mu1, q01, q10, N, psi) {
   }
   
   # make a list to return
-  res <- list(SIM = sim, SAMPLE = sample, ORIG = origin,
+  res <- list(SIM = sim, SAMPLE = sample,
               TREE = tree, ULTRATREE = treeUltra, FBDTREE = treeFBD,
               TRAITSULTRA = treeUltraTraits, TRAITSFBD = treeFBDTraits)
   
@@ -331,8 +326,8 @@ save_sims <- function(nReps, simReps, targetDir) {
   # extract simulations
   simList <- lapply(1:nReps, function(x) simReps[[x]]$SIM)
   
-  # extract origin times
-  origins <- unlist(lapply(1:nReps, function(x) simReps[[x]]$ORIG))
+  # # extract origin times
+  # origins <- unlist(lapply(1:nReps, function(x) simReps[[x]]$ORIG))
   
   # trait data 
   traitsUltra <- lapply(1:nReps, function(x) simReps[[x]]$TRAITSULTRA)
@@ -413,10 +408,10 @@ save_sims <- function(nReps, simReps, targetDir) {
     write.nexus(treeFBDList[[x]], 
                 file = paste0(treeFBDDir, "tree_fbd_", x, ".nex"))))
 
-  # and FBD tree origin times
-  invisible(lapply(1:nReps, function(x)
-    write_delim(as.data.frame(origins), paste0(comb_dir, "origins.txt"), 
-                col_names = FALSE)))
+  # # and FBD tree origin times
+  # invisible(lapply(1:nReps, function(x)
+  #   write_delim(as.data.frame(origins), paste0(treeFBDDir, "origins.txt"), 
+  #               col_names = FALSE)))
   
   # save complete trees as well
   invisible(lapply(1:nReps, function(x)
@@ -497,3 +492,37 @@ for (i in 2) {#1:length(psiVar)) {
     simulate(seeds, nReps, comb, key, simDir, N, psi)
   }
 }
+
+# # if need to do origins again
+# # MRCA 
+# MRCA <- ifelse(any(tMRCA == sim$TS), 
+#                which(tMRCA == sim$TS), 
+#                gsub("t", "", treeFBD$node.label[1]))
+# 
+# # if MRCA is a number, it's a speciation event
+# if (is.numeric(MRCA)) {
+#   if (length(abs(sim$TS[sim$TS > tMRCA & sampled] - tMRCA)) == 0) {
+#     previousSpec <- tMRCA + 
+#       min(abs(sim$TS[sim$TS > tMRCA] - tMRCA))
+#   } else {
+#     previousSpec <- tMRCA + 
+#       min(abs(sim$TS[sim$TS > tMRCA & sampled] - tMRCA))
+#   }
+#   
+#   previousSp <- which(sim$TS == previousSpec)
+#   
+#   origin <- sim$TS[previousSp]
+# } else {
+#   origin <- sim$TS[floor(as.numeric(MRCA))]
+# }
+# 
+# # root edge
+# treeFBD$root.edge <- origin - tMRCA
+# if (is.na(origin) || length(origin) == 0 || treeFBD$root.edge == 0 ||
+#     origin < 0) {
+#   print(tMRCA)
+#   print(origin)
+#   print(MRCA)
+#   print(sim)
+#   print(head(sample))
+# }

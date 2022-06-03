@@ -21,9 +21,6 @@ data_dir <- "simulation/replicates/" + psiRef + "/" + ref + "/"
 # get the tree
 tree <- readTrees(file = data_dir + "trees/fbd/tree_fbd_" + rep + ".nex")[1]
 
-# get origin time
-origin_age <- readMatrix(file = data_dir + "trees/fbd/origins.txt", " ")[rep][1]
-
 # get the taxa list
 taxa <- tree.taxa()
 
@@ -64,17 +61,17 @@ root_age <- tree.rootAge()
 print("setting tree")
 
 # set the bisse fbd tree
-fbdbisse_tree ~ dnFBDP(originAge = origin_age, lambda = lambda, mu = mu, psi = psi, taxa = taxa)
+timetree ~ dnFBDP(rootAge = root_age, lambda = lambda, mu = mu, psi = psi, taxa = taxa)
 
 print("done setting tree")
 
 # clamp it to the data
-fbdbisse_tree.clamp(tree)
+timetree.clamp(tree)
 
 print("done clamping tree")
 
 # create our model object
-mymodel = model(fbdbisse_tree)
+mymodel = model(timetree)
 
 ###
 # set up monitors and run analysis
@@ -89,10 +86,10 @@ monitors.append(mnModel(filename = out_name + "fbd/ssefbd.log", printgen = 100))
 monitors.append(mnScreen(printgen = 1000))
 
 # creates mcmc object
-mymcmc = mcmc(mymodel, monitors, moves, nruns = 2, combine = "mixed")
+#mymcmc = mcmc(mymodel, monitors, moves, nruns = 2, combine = "mixed")
 
 # run mcmc
-mymcmc.run(generations = 100000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/ssefbd" + rep + ".state")
+#mymcmc.run(generations = 1000, tuningInterval = 200, checkpointInterval = 1000, checkpointFile = out_name + "/checkpoint/ssefbd" + rep + ".state")
 
 # quit
 #q()
